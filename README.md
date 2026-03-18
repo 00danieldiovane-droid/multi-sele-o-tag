@@ -1,24 +1,28 @@
 # Custom Multi-Select Tag Filter 🏷️
 
-Um componente leve e performático para transformar `<select>` estáticos em campos de multisseleção dinâmicos com busca em tempo real e interface de tags.
+Este componente substitui o `<select multiple>` nativo por uma interface moderna de busca com etiquetas (tags), ideal para dashboards e filtragem de grandes volumes de dados.
 
-## 🚀 Funcionalidades
-* **Busca em Tempo Real:** Filtra opções conforme o usuário digita.
-* **Gerenciamento de Tags:** Adição e remoção intuitiva de itens.
-* **Prevenção de Duplicatas:** Utiliza `Set()` para garantir unicidade.
-* **Estado "Todos":** Comportamento inteligente quando nenhuma tag está selecionada.
+## 📌 Como Implementar
 
-## 🛠️ Estrutura de Implementação
+### 1. Instalação
+Basta copiar os arquivos `style.css` e `script.js` para o seu projeto e referenciá-los no seu HTML.
 
-### Passo 1: Estilização (CSS)
-O componente utiliza um container flexível que mimetiza o comportamento de um input padrão, mas permite o empilhamento de tags.
+### 2. Estrutura HTML
+Certifique-se de manter a hierarquia de IDs, pois o JavaScript depende deles para renderizar as tags:
+* `multi-select-ID`: O container principal.
+* `tags-ID`: Onde as etiquetas são injetadas.
+* `input-search-ID`: Onde o usuário digita.
+* `results-ID`: O dropdown de sugestões.
 
-```css
-.multi-select-container { 
-    display: flex; 
-    flex-wrap: wrap; 
-    gap: 2px; 
-    padding: 2px 4px;
-    border: 1px solid #ced4da;
-}
-/* As tags ocupam espaço dinâmico e o input expande para preencher o resto */
+### 3. Integração com seus Dados
+Para que o filtro funcione com sua base de dados real, altere a lógica de filtragem conforme o exemplo abaixo:
+
+```javascript
+// No seu script de filtragem de tabela/lista:
+const dadosFiltrados = seuArrayOriginal.filter(d => {
+    // Se nada estiver selecionado, exibe todos os registros
+    if (itemsSelecionados.size === 0) return true;
+    
+    // Verifica se o valor da linha está contido no Set de tags
+    return itemsSelecionados.has(d.departamento);
+});
