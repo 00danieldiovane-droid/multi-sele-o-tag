@@ -1,84 +1,158 @@
-/home/mario/docs/gui-multiselect-tags.sh [EXECUTE]
+GUI DE IMPLEMENTAÇÃO: FILTRO MULTISSELEÇÃO (TAGS)
+=================================================
 
-[SYSTEM]: CARREGANDO GUIA DE IMPLEMENTAÇÃO...
-[STATUS]: OK
-================================================================================
-          GUI DE IMPLEMENTAÇÃO: FILTRO MULTISSELEÇÃO (TAGS) v1.0
-================================================================================
-
-$ cat description.txt
-> Este guia detalha a conversão de um <select> nativo para um componente
-> dinâmico de multisseleção com busca e tags, otimizado para filtros de suporte.
+Este guia explica como transformar um <select> simples em um componente de 
+multisseleção com busca e tags, como implementado no filtro de "Suporte".
 
 --------------------------------------------------------------------------------
-[STEP 01]: CSS (INTERFACE VISUAL)
+PASSO 1: CSS (Estilização)
 --------------------------------------------------------------------------------
-# Estilos aplicados ao bloco <style> para renderização do container e tags.
+Adicione estas classes ao seu bloco <style>. Elas definem a aparência da caixa
+de input, das etiquetas (tags) e da lista suspensa de resultados.
 
-.multi-select-container { 
-    background: #FFF; border: 1px solid #CED4DA; border-radius: 4px;
-    display: flex; flex-wrap: wrap; gap: 2px; padding: 2px 4px;
-}
+<style>
+  /* Container principal que parece um input */
+  .multi-select-container { 
+    background: white; 
+    border-radius: 4px; 
+    display: flex; 
+    flex-wrap: wrap; 
+    align-items: center; 
+    gap: 2px; 
+    cursor: text; 
+    min-height: 32px; /* Ajuste conforme altura dos seus inputs */
+    padding: 2px 4px; 
+    border: 1px solid #ced4da; 
+  }
 
-.tag { 
-    background-color: #007BFF; color: #FFF; font-size: 0.65rem;
-    padding: 0px 4px; border-radius: 3px; display: inline-flex;
-}
+  /* A etiqueta visual do item selecionado */
+  .tag { 
+    background-color: var(--primary); /* Ou uma cor fixa ex: #007bff */
+    color: white; 
+    padding: 0px 4px; 
+    border-radius: 3px; 
+    font-size: 0.65rem; 
+    display: inline-flex; 
+    align-items: center; 
+    margin: 1px; 
+  }
 
-.results-container { 
-    display: none; position: absolute; width: 100%; z-index: 2000;
-    background: #FFF; border: 1px solid #CCC; box-shadow: 0 4px 6px RGBA(0,0,0,0.1);
-}
+  /* O 'X' para remover a tag */
+  .remove-tag { 
+    margin-left: 4px; 
+    cursor: pointer; 
+    font-weight: bold; 
+    font-size: 0.8rem; 
+    line-height: 1; 
+  }
+
+  /* A lista suspensa de opções */
+  .results-container { 
+    display: none; /* Oculto por padrão */
+    position: absolute; 
+    top: 100%; 
+    left: 0; 
+    width: 100%; 
+    max-height: 200px; 
+    overflow-y: auto; 
+    background: white; 
+    border: 1px solid #ccc; 
+    z-index: 2000; 
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+    border-radius: 4px; 
+    margin-top: 2px; 
+  }
+
+  /* Item individual da lista */
+  .result-item { 
+    padding: 4px 8px; 
+    cursor: pointer; 
+    font-size: 0.75rem; 
+    color: #333; 
+  }
+  .result-item:hover { background-color: #e2e8f0; }
+</style>
 
 --------------------------------------------------------------------------------
-[STEP 02]: HTML (ESTRUTURA DE DOM)
+PASSO 2: HTML (Estrutura)
 --------------------------------------------------------------------------------
-# Estrutura preparada para substituição do select original.
+No lugar onde estava o <select>, coloque esta estrutura. Note o `position: relative`
+no pai para que a lista de resultados fique ancorada corretamente.
 
 <div class="filter-item" style="position: relative;">
-    <label>Filtro de Suporte</label>
-    <div id="multi-select-ID" class="multi-select-container">
-        <div id="tags-ID" style="display: contents;"></div>
-        <input type="text" id="input-search-ID" placeholder="Todos" style="...">
-    </div>
-    <div id="results-ID" class="results-container"></div>
+  <label>Nome do Filtro</label>
+  
+  <!-- Container visual -->
+  <div id="multi-select-ID" class="multi-select-container">
+    <!-- Onde as tags selecionadas aparecerão -->
+    <div id="tags-ID" style="display: contents;"></div>
+    
+    <!-- O input invisível para digitar -->
+    <input type="text" id="input-search-ID" placeholder="Todos" 
+           style="border: none; outline: none; background: transparent; flex-grow: 1; font-size: 0.75rem; color: #333; min-width: 50px;">
+  </div>
+
+  <!-- Lista de resultados (dropdown) -->
+  <div id="results-ID" class="results-container"></div>
 </div>
 
 --------------------------------------------------------------------------------
-[STEP 03]: JAVASCRIPT (LÓGICA DO KERNEL)
+PASSO 3: JAVASCRIPT (Lógica)
 --------------------------------------------------------------------------------
-$ run logic_overview.js
 
-01. VARIÁVEIS GLOBAIS:
-    let itemsDisponiveis = [];  // Lista total de opções
-    let itemsSelecionados = new Set(); // Controle de estado (Unique Only)
+1. Variáveis Globais:
+   Crie variáveis para controlar o estado.
+   let itemsDisponiveis = []; // Lista completa de opções (strings)
+   let itemsSelecionados = new Set(); // Set evita duplicatas automaticamente
+   let isMultiSelectInitialized = false;
 
-02. RENDER_RESULTS():
-    - Filtra 'itemsDisponiveis' via Input Value (toLowerCase).
-    - Remove itens já presentes no Set 'itemsSelecionados'.
-    - Injeta .result-item no DOM.
+2. Inicialização (Chame isso ao carregar os dados):
+   itemsDisponiveis = [...new Set(DADOS.map(d => d.Campo))]; // Extrai valores únicos
+   initMultiSelect();
 
-03. RENDER_TAGS():
-    - Limpa container #tags-ID.
-    - Loop no Set -> Cria .tag com botão de remoção [X].
-    - IF Set.size > 0 THEN input.placeholder = "" ELSE "Todos".
+3. Funções Principais:
+
+   function initMultiSelect() {
+     if(isMultiSelectInitialized) return;
+     isMultiSelectInitialized = true;
+
+     const container = document.getElementById('multi-select-ID');
+     const input = document.getElementById('input-search-ID');
+     const results = document.getElementById('results-ID');
+     // ... Adicione listeners de click no container para focar no input
+     // ... Adicione listener de input para filtrar results (renderResults)
+     // ... Adicione listener de click em 'result-item' para adicionar ao Set e chamar renderTags()
+     // ... Adicione listener de click em 'remove-tag' para deletar do Set
+   }
+
+   function renderResults() {
+     // Filtra 'itemsDisponiveis' baseado no texto do input
+     // Exclui itens que já estão em 'itemsSelecionados'
+     // Gera o HTML dos .result-item e joga na div de results
+   }
+
+   function renderTags() {
+     // Limpa a div de tags
+     // Itera sobre 'itemsSelecionados' criando o HTML das .tag
+     // Atualiza placeholder do input (Se vazio = "Todos", senão = "")
+   }
 
 --------------------------------------------------------------------------------
-[STEP 04]: DATA INTEGRATION (MOTO-FILTRO)
+PASSO 4: INTEGRAÇÃO COM FILTRO DE DADOS
 --------------------------------------------------------------------------------
-# Mudança na lógica de comparação de dados:
+Na sua função principal de filtro (ex: filtrarLocal), altere a lógica de
+comparação simples (===) para verificação de conjunto (.has).
 
-$ diff --old=SelectSimples --new=MultiTag
+Antes (Select simples):
+  const filtroValor = document.getElementById('meu-select').value;
+  dados.filter(d => filtroValor === "" || d.Campo === filtroValor);
 
-- const filtro = document.getElementById('select').value;
-- dados.filter(d => filtro === "" || d.Campo === filtro);
-
-+ // Lógica baseada em Set (O(1) complexity)
-+ dados.filter(d => {
-+    if (itemsSelecionados.size === 0) return true;
-+    return itemsSelecionados.has(d.Campo);
-+ });
-
-================================================================================
-[COMPLETED]: COMPONENTE PRONTO PARA DEPLOY.
-================================================================================
+Depois (Multisseleção):
+  // Não precisa ler do DOM, use a variável global do Set
+  dados.filter(d => {
+    // Se o Set estiver vazio, considera como "Todos" (retorna true)
+    if (itemsSelecionados.size === 0) return true;
+    
+    // Senão, verifica se o item da linha está dentro do Set
+    return itemsSelecionados.has(d.Campo);
+  });
