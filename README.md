@@ -1,16 +1,84 @@
-# multi-seleção-tag
-select com mult seleção organizado por tag
-🏷️ Componente Multi-Seleção com Tags (Vanilla JS)Este componente transforma um <select> HTML simples em uma interface de multisseleção dinâmica com busca em tempo real, suporte a etiquetas (tags) e filtragem de conjuntos de dados.🚀 FuncionalidadesBusca em Tempo Real: Filtra as opções conforme o usuário digita.Interface de Tags: Visualização clara dos itens selecionados com opção de remoção individual.Gestão de Estado com Set: Utiliza a estrutura Set do JavaScript para garantir que não existam itens duplicados.Lógica de Filtro "OU": Se nada for selecionado, o componente assume "Todos". Se houver seleção, filtra apenas os itens contidos no conjunto.🛠️ Estrutura de Implementação1. Estilização (CSS)O componente utiliza um container flexível que simula o comportamento de um input de texto, mas comporta elementos filhos (tags)..multi-select-container: O corpo principal do componente..tag: Etiquetas compactas para itens selecionados..results-container: Dropdown absoluto que aparece abaixo do input durante a busca.2. Estrutura de Dados (HTML)Diferente do select padrão, utilizamos uma div de posicionamento relativo para ancorar a lista de resultados.HTML<div class="filter-item" style="position: relative;">
-  <label>Nome do Filtro</label>
-  <div id="multi-select-ID" class="multi-select-container">
-    <div id="tags-ID" style="display: contents;"></div>
-    <input type="text" id="input-search-ID" placeholder="Todos">
-  </div>
-  <div id="results-ID" class="results-container"></div>
+/home/mario/docs/gui-multiselect-tags.sh [EXECUTE]
+
+[SYSTEM]: CARREGANDO GUIA DE IMPLEMENTAÇÃO...
+[STATUS]: OK
+================================================================================
+          GUI DE IMPLEMENTAÇÃO: FILTRO MULTISSELEÇÃO (TAGS) v1.0
+================================================================================
+
+$ cat description.txt
+> Este guia detalha a conversão de um <select> nativo para um componente
+> dinâmico de multisseleção com busca e tags, otimizado para filtros de suporte.
+
+--------------------------------------------------------------------------------
+[STEP 01]: CSS (INTERFACE VISUAL)
+--------------------------------------------------------------------------------
+# Estilos aplicados ao bloco <style> para renderização do container e tags.
+
+.multi-select-container { 
+    background: #FFF; border: 1px solid #CED4DA; border-radius: 4px;
+    display: flex; flex-wrap: wrap; gap: 2px; padding: 2px 4px;
+}
+
+.tag { 
+    background-color: #007BFF; color: #FFF; font-size: 0.65rem;
+    padding: 0px 4px; border-radius: 3px; display: inline-flex;
+}
+
+.results-container { 
+    display: none; position: absolute; width: 100%; z-index: 2000;
+    background: #FFF; border: 1px solid #CCC; box-shadow: 0 4px 6px RGBA(0,0,0,0.1);
+}
+
+--------------------------------------------------------------------------------
+[STEP 02]: HTML (ESTRUTURA DE DOM)
+--------------------------------------------------------------------------------
+# Estrutura preparada para substituição do select original.
+
+<div class="filter-item" style="position: relative;">
+    <label>Filtro de Suporte</label>
+    <div id="multi-select-ID" class="multi-select-container">
+        <div id="tags-ID" style="display: contents;"></div>
+        <input type="text" id="input-search-ID" placeholder="Todos" style="...">
+    </div>
+    <div id="results-ID" class="results-container"></div>
 </div>
-🧠 Lógica de FuncionamentoO ciclo de vida do componente é dividido em três pilares:A. InicializaçãoOs itens disponíveis são extraídos dinamicamente da base de dados principal, garantindo que o filtro sempre exiba opções existentes.JavaScriptitemsDisponiveis = [...new Set(DADOS.map(d => d.Campo))];
-B. Renderização de ResultadosAo digitar no campo de busca, o script realiza:Filtro por texto (case-insensitive).Exclusão de itens que já foram selecionados (evita redundância).Criação dinâmica de elementos .result-item.C. Renderização de TagsSempre que o Set de itens selecionados é alterado (adição ou remoção):A área de tags é limpa e reconstruída.O placeholder do input é alternado entre "Todos" (vazio) ou "" (com tags), mantendo a UI limpa.🔍 Integração com Motores de FiltroPara integrar este componente à sua lógica de filtragem de dados (ex: filtragem de uma tabela de chamados), substitua a comparação de igualdade simples por uma verificação de pertinência:Lógica de Comparação:$$f(x) = \begin{cases} \text{true}, & \text{se } \text{Set.size} = 0 \\ \text{Set.has}(x), & \text{caso contrário} \end{cases}$$JavaScript// Exemplo de aplicação no Array.filter()
-const dadosFiltrados = dados.filter(d => {
-    return itemsSelecionados.size === 0 || itemsSelecionados.has(d.Campo);
-});
-📝 Notas de UsoAjuste de Altura: O min-height: 32px no CSS deve ser ajustado para alinhar com os outros inputs do seu sistema.Cores: A classe .tag utiliza var(--primary). Certifique-se de que essa variável está definida no seu tema global ou substitua por uma cor hexadecimal.
+
+--------------------------------------------------------------------------------
+[STEP 03]: JAVASCRIPT (LÓGICA DO KERNEL)
+--------------------------------------------------------------------------------
+$ run logic_overview.js
+
+01. VARIÁVEIS GLOBAIS:
+    let itemsDisponiveis = [];  // Lista total de opções
+    let itemsSelecionados = new Set(); // Controle de estado (Unique Only)
+
+02. RENDER_RESULTS():
+    - Filtra 'itemsDisponiveis' via Input Value (toLowerCase).
+    - Remove itens já presentes no Set 'itemsSelecionados'.
+    - Injeta .result-item no DOM.
+
+03. RENDER_TAGS():
+    - Limpa container #tags-ID.
+    - Loop no Set -> Cria .tag com botão de remoção [X].
+    - IF Set.size > 0 THEN input.placeholder = "" ELSE "Todos".
+
+--------------------------------------------------------------------------------
+[STEP 04]: DATA INTEGRATION (MOTO-FILTRO)
+--------------------------------------------------------------------------------
+# Mudança na lógica de comparação de dados:
+
+$ diff --old=SelectSimples --new=MultiTag
+
+- const filtro = document.getElementById('select').value;
+- dados.filter(d => filtro === "" || d.Campo === filtro);
+
++ // Lógica baseada em Set (O(1) complexity)
++ dados.filter(d => {
++    if (itemsSelecionados.size === 0) return true;
++    return itemsSelecionados.has(d.Campo);
++ });
+
+================================================================================
+[COMPLETED]: COMPONENTE PRONTO PARA DEPLOY.
+================================================================================
